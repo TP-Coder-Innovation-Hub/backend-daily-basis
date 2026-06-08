@@ -179,6 +179,132 @@ public class EmailService {
 }
 ```
 
+## Part 2: Go Consumer — Cross-Language Queue Consumption
+
+Message queues are language-agnostic. Your producer can be Java while your consumer is Go — they just need to agree on the message format. Go is common for high-throughput consumers due to low memory footprint and goroutine concurrency.
+
+### Step 1: Go Consumer Setup
+
+```bash
+mkdir email-worker && cd email-worker
+go mod init github.com/example/email-worker
+go get github.com/rabbitmq/amqp091-go
+```
+
+### Step 2: Consumer with Manual Ack
+
+```go
+// main.go
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "log"
+    "os"
+    "time"
+
+    amqp "github.com/rabbitmq/amqp091-go"
+)
+
+type EmailTask struct {
+    To        string            `json:"to"`
+    Subject   string            `json:"subject"`
+    Template  string            `json:"template"`
+    Variables map[string]string `json:"variables"`
+}
+
+func main() {
+    amqpURL := os.Getenv("RABBITMQ_URL")
+    if amqpURL == "" {
+        amqpURL = "amqp://guest:guest@localhost:5672/"
+    }
+
+    conn, err := amqp.Dial(amqpURL)
+    if err != nil {
+        log.Fatalf("Failed to connect: %v", err)
+    }
+    defer conn.Close()
+
+    ch, err := conn.Channel()
+    if err != nil {
+        log.Fatalf("Failed to open channel: %v", err)
+    }
+    defer ch.Close()
+
+    ch.Qos(10, 0, false)
+
+    msgs, err := ch.Consume(
+        "email-sending",
+        "email-worker-go",
+        false,
+        false,
+        false,
+        false,
+        nil,
+    )
+    if err != nil {
+        log.Fatalf("Failed to register consumer: %v", err)
+    }
+
+    log.Println("Go email worker started. Waiting for messages...")
+
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+
+    for msg := range msgs {
+        var task EmailTask
+        if err := json.Unmarshal(msg.Body, &task); err != nil {
+            log.Printf("Invalid message format: %v", err)
+            msg.Nack(false, false)
+            continue
+        }
+
+        if err := processEmail(ctx, task); err != nil {
+            log.Printf("Temporary failure for %s: %v", task.To, err)
+            msg.Nack(false, true)
+            continue
+        }
+
+        msg.Ack(false)
+        log.Printf("Email sent to %s: %s", task.To, task.Subject)
+    }
+}
+
+func processEmail(ctx context.Context, task EmailTask) error {
+    log.Printf("Sending %s to %s", task.Template, task.To)
+    return nil
+}
+```
+
+### Step 3: Docker Compose — Java + Go Together
+
+```yaml
+# docker-compose.yml
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  java-producer:
+    build: ./java-app
+    depends_on:
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+
+  go-worker:
+    build: ./email-worker
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+```
+
+The Java Spring Boot app publishes to RabbitMQ. The Go worker consumes and processes. Same queue, different languages. The message format (JSON) is the contract between them.
+
 ## Key Points
 
 - Use RabbitMQ for task queues — each message processed by exactly one worker
@@ -186,3 +312,4 @@ public class EmailService {
 - Configure a DLQ — inspect failed messages instead of losing them
 - Make consumers idempotent — at-least-once means possible duplicates
 - Set `prefetch` to limit unacked messages per consumer (prevents overload)
+- Queues are language-agnostic — Java producer, Go consumer is a common production pattern
