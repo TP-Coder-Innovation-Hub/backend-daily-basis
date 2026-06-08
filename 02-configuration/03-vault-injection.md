@@ -10,7 +10,7 @@ Secrets in environment variables or config files are visible in process lists, C
 graph LR
     A[Spring Boot App] -->|Authenticates| B[Vault Server]
     B -->|Returns secret| A
-    A -->|Injects into| C[@Value / ConfigProperties]
+    A -->|Injects into| C["@Value / ConfigProperties"]
 ```
 
 ## Step 1: Add Dependencies
