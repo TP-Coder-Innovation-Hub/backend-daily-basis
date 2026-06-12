@@ -1,4 +1,4 @@
-# Metrics — Spring Boot Actuator and Prometheus
+# Metrics — Spring Boot Actuator, OTel, and the Metrics Landscape
 
 ## Spring Boot Actuator
 
@@ -135,34 +135,107 @@ public class MetricsConfig {
 }
 ```
 
-## Step 6: Grafana Dashboard Concepts
+## Step 6: Exporting Metrics via OpenTelemetry
 
-Prometheus collects metrics. Grafana visualizes them. Key panels:
+Micrometer is a vendor-neutral abstraction. It already supports Prometheus, OTel, Datadog, and many others. To export via OpenTelemetry Protocol (OTLP) instead of Prometheus pull:
+
+```xml
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-otlp</artifactId>
+</dependency>
+```
+
+```yaml
+management:
+  otlp:
+    metrics:
+      export:
+        url: http://otel-collector:4318/v1/metrics
+        step: 30s
+```
+
+Your application code (`@Timed`, `MeterRegistry`) does not change. Only the export configuration differs. This is the key benefit of OTel: **instrument once, send anywhere**.
+
+## The Metrics Backend Landscape
+
+```mermaid
+graph LR
+    A[Spring Boot + Micrometer] --> B{Export via}
+    B -->|Prometheus scrape| C[Prometheus + Grafana]
+    B -->|OTLP| D[ClickStack]
+    B -->|OTLP| E[Grafana LGTM Stack]
+    B -->|OTLP| F[Datadog / New Relic]
+```
+
+| Stack | Type | Strengths | Tradeoffs |
+|-------|------|-----------|-----------|
+| **Prometheus + Grafana** | Self-hosted | Industry standard, huge community, PromQL | Separate system for logs/traces; storage needs management |
+| **LGTM** (Loki+Grafana+Tempo+Mimir) | Self-hosted | Unified Grafana Labs stack for all 3 pillars | Complex to operate; 4 separate components |
+| **ClickStack** | Self-hosted | Unified logs+traces+metrics in one ClickHouse, OTel-native, SQL queries | Newer project; smaller community |
+| **Datadog** | SaaS | Turnkey, excellent UI, APM+logs+metrics in one | Expensive at scale; vendor lock-in |
+| **New Relic** | SaaS | Generous free tier, good APM, OTel support | Cost grows with ingest; less flexible queries |
+
+Decision framework:
+- **Startup / side project**: New Relic free tier or ClickStack Docker
+- **Team with ops capacity**: LGTM or Prometheus + Grafana
+- **Enterprise with budget**: Datadog or New Relic
+- **Cost-sensitive at scale**: ClickStack (ClickHouse storage is cheap)
+
+## Worked Example: Prometheus + Grafana (Local)
+
+```yaml
+# docker-compose.yml
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+```
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: product-service
+    metrics_path: /actuator/prometheus
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+```
+
+Key Grafana panels:
 
 ```
-Panel 1: Request Rate
-  sum(rate(http_server_requests_seconds_count{uri!~".*actuator.*"}[5m]))
-  by (uri, method)
+Request Rate:
+  sum(rate(http_server_requests_seconds_count{uri!~".*actuator.*"}[5m])) by (uri, method)
 
-Panel 2: Error Rate
+Error Rate:
   sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
   / sum(rate(http_server_requests_seconds_count[5m]))
 
-Panel 3: Latency P95
-  histogram_quantile(0.95,
-    sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))
+Latency P95:
+  histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))
 
-Panel 4: JVM Memory
+JVM Memory:
   jvm_memory_used_bytes{area="heap"}
 
-Panel 5: HikariCP Active Connections
+HikariCP Active Connections:
   hikaricp_connections_active
 ```
+
+To switch to ClickStack, change the Micrometer registry to `micrometer-registry-otlp` and point the OTLP URL to the ClickStack OTel collector. Same application code.
 
 ## Key Points
 
 - Actuator + Micrometer gives you metrics for free — JVM, HTTP, database connections
 - Use `@Timed` on service methods to track business metrics
 - Follow the RED method: Rate, Errors, Duration for every service
-- Prometheus scrapes `/actuator/prometheus`; Grafana queries Prometheus
-- Tag metrics with business dimensions (category, method, status) for meaningful dashboards
+- OTel/OTLP makes your metrics vendor-neutral — change backend by changing config, not code
+- Choose your backend based on team size, budget, and whether you want to manage infrastructure

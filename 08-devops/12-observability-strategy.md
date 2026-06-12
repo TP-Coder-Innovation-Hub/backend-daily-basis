@@ -1,4 +1,4 @@
-# Observability Strategy — Metrics + Logs + Traces
+# Observability Strategy — The Three Pillars and the OTel Landscape
 
 ## The Three Pillars
 
@@ -86,7 +86,6 @@ CPU might be high because of a legitimate traffic spike. Latency affects users d
 ### Practical Alerts
 
 ```yaml
-# Prometheus alert rules
 groups:
   - name: product-service
     rules:
@@ -146,14 +145,89 @@ Every alert needs a runbook — a document that explains:
 ## Escalate: #platform-engineering Slack channel
 ```
 
-## Practical Production Setup
+## The Observability Stack Landscape
+
+```mermaid
+graph TD
+    A[Spring Boot Application] -->|Micrometer / Logback / Tracing| B[OTel Collector]
+    B --> C{Choose Backend}
+    C -->|Self-hosted| D[ELK + Prometheus + Jaeger]
+    C -->|Self-hosted unified| E[LGTM Stack]
+    C -->|Self-hosted unified| F[ClickStack]
+    C -->|SaaS| G[Datadog / New Relic]
+```
+
+### Option 1: Traditional Separate Stack (ELK + Prometheus + Jaeger)
 
 ```
-Spring Boot → Micrometer → Prometheus → Grafana (dashboards)
-Spring Boot → Logback → Logstash → Elasticsearch → Kibana (logs)
-Spring Boot → Micrometer Tracing → Zipkin/Jaeger (traces)
-Prometheus → Alertmanager → Slack/PagerDuty (alerts)
+Metrics:  Spring Boot → Micrometer → Prometheus → Grafana
+Logs:     Spring Boot → Logback → Logstash → Elasticsearch → Kibana
+Traces:   Spring Boot → Micrometer Tracing → Jaeger
 ```
+
+Three separate systems to deploy, configure, and maintain. Each is mature and battle-tested. Correlation between pillars requires manual trace ID lookups. ELK is widely used in Thai enterprises.
+
+### Option 2: Grafana LGTM Stack (Loki + Grafana + Tempo + Mimir)
+
+```
+Metrics:  Spring Boot → OTLP → Mimir → Grafana
+Logs:     Spring Boot → OTLP → Loki → Grafana
+Traces:   Spring Boot → OTLP → Tempo → Grafana
+```
+
+One UI (Grafana) for all three pillars. Each backend is purpose-built and efficient. More components to operate, but Grafana Cloud offers managed versions.
+
+### Option 3: ClickStack (ClickHouse + HyperDX + OTel Collector)
+
+```
+All:  Spring Boot → OTLP → ClickStack (logs + traces + metrics in one ClickHouse)
+```
+
+One backend for everything. SQL queries across all telemetry types. ClickHouse columnar storage handles high-cardinality, high-volume data cheaply. OTel-native. Newer but actively developed by ClickHouse Inc.
+
+### Option 4: SaaS (Datadog / New Relic)
+
+```
+All:  Spring Boot → OTLP → Datadog / New Relic
+```
+
+Zero infrastructure. Correlates logs, traces, metrics, and real-user monitoring automatically. Best-in-class UIs. Expensive at scale (pay per GB ingested per host). Good for teams without dedicated ops.
+
+### Decision Framework
+
+| Situation | Pick |
+|-----------|------|
+| Startup, small team, no ops | New Relic free tier or ClickStack Docker |
+| Thai enterprise, already has ELK | Keep ELK, add Prometheus + Jaeger alongside |
+| Team using Grafana for everything | LGTM stack |
+| Want one backend, cost-sensitive at scale | ClickStack |
+| Budget available, want zero ops | Datadog |
+
+### The Key Principle: OTel Makes This a Config Change
+
+All four options receive data via the same OpenTelemetry pipeline. Your Spring Boot application code (`@Timed`, structured logging, `Tracer`) does not change when you switch backends. Only the OTel Collector exporter endpoint changes:
+
+```yaml
+# ClickStack
+exporters:
+  otlp:
+    endpoint: clickstack:4317
+
+# Datadog
+exporters:
+  datadog:
+    api:
+      key: ${DD_API_KEY}
+
+# New Relic
+exporters:
+  otlp:
+    endpoint: otlp.nr-data.net:4317
+    headers:
+      api-key: ${NEW_RELIC_LICENSE_KEY}
+```
+
+Instrument once. Change the endpoint. This is why OTel is the standard.
 
 ## Key Points
 
@@ -161,4 +235,5 @@ Prometheus → Alertmanager → Slack/PagerDuty (alerts)
 - Alert on symptoms (latency, errors) not causes (CPU, disk)
 - Define SLOs and track error budgets
 - Write runbooks for every alert — during an incident is too late
-- Correlate metrics, logs, and traces using trace IDs for fast debugging
+- OTel is the pipe — your application code is backend-agnostic
+- Choose your stack based on team size, budget, and ops capacity, not technical superiority

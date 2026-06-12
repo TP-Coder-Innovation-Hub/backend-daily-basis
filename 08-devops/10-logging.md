@@ -1,8 +1,8 @@
-# Logging — Structured Logging and Aggregation
+# Logging — Structured Logging, OTel, and the Logging Landscape
 
 ## Why Structured Logging
 
-Plain text logs are hard to parse and search. JSON logs are machine-readable — log aggregation systems (ELK, Datadog, Splunk) index every field for instant filtering.
+Plain text logs are hard to parse and search. JSON logs are machine-readable — log aggregation systems index every field for instant filtering.
 
 ```json
 {"timestamp":"2024-01-15T10:30:00.123Z","level":"INFO","logger":"c.e.o.OrderService","message":"Order created","traceId":"abc123","orderId":42,"customerId":"C-100","duration":125}
@@ -137,41 +137,117 @@ logging:
     org.hibernate.SQL: WARN
 ```
 
-## Step 5: ELK Stack Integration
+## Step 5: Shipping Logs via OpenTelemetry
+
+Your app emits structured JSON logs. The question is: where do they go? OpenTelemetry provides a vendor-neutral pipeline.
+
+```mermaid
+graph LR
+    A[Spring Boot + Logback] -->|JSON stdout| B[OTel Collector]
+    B -->|OTLP| C[ClickStack / ELK / Datadog / New Relic]
+```
+
+The OTel Collector reads logs from your application (file tailing, stdout, or direct OTLP export) and forwards them to any backend. Your Logback configuration stays the same regardless of backend.
 
 ```yaml
-# logstash.conf
-input {
-  tcp {
-    port => 5000
-    codec => json_lines
-  }
-}
-filter {
-  mutate {
-    rename => { "[headers][X-Correlation-ID]" => "correlationId" }
-  }
-}
-output {
-  elasticsearch {
-    hosts => ["elasticsearch:9200"]
-    index => "app-logs-%{+YYYY.MM.dd}"
-  }
-}
+# OTel Collector config — filelog receiver + OTLP export
+receivers:
+  filelog:
+    include: [/var/log/app/*.log]
+    parsers:
+      json:
+        timestamp_key: timestamp
+        severity_key: level
+
+exporters:
+  otlp:
+    endpoint: clickstack:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog]
+      exporters: [otlp]
 ```
 
-```xml
-<!-- Send logs to Logstash over TCP -->
-<appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-    <destination>logstash:5000</destination>
-    <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
-</appender>
+Change the `endpoint` to point at Datadog, New Relic, or an OTLP-compatible ELK setup. Same collector config, different endpoint.
+
+## The Logging Backend Landscape
+
+| Stack | Type | Strengths | Tradeoffs |
+|-------|------|-----------|-----------|
+| **ELK** (Elasticsearch+Logstash+Kibana) | Self-hosted | Mature, huge ecosystem, powerful full-text search | Resource-heavy; Elasticsearch needs tuning at scale |
+| **Grafana Loki** | Self-hosted | Lightweight, indexes labels only (not full text), cheap to run | Query power limited vs Elasticsearch; not a drop-in replacement |
+| **ClickStack** | Self-hosted | Unified with traces+metrics, SQL queries on logs, ClickHouse is fast at scale | Newer; smaller community than ELK |
+| **Datadog Log Management** | SaaS | Turnkey, powerful search, correlates with APM traces | Expensive per GB ingested |
+| **New Relic Logging** | SaaS | Generous free tier, NRQL queries, OTel-native ingest | Cost grows with volume |
+
+Decision framework:
+- **Already running Elasticsearch**: ELK — don't add another system
+- **Want cheapest self-hosted**: Loki — indexes labels, not full text, runs on minimal resources
+- **Want unified logs+traces+metrics**: ClickStack — one backend for everything
+- **No ops team, need it now**: Datadog or New Relic — pay and go
+
+## Worked Example: ClickStack (Docker Compose)
+
+```yaml
+# docker-compose.yml
+services:
+  clickstack:
+    image: docker.hyperdx.io/hyperdx/hyperdx-all-in-one
+    ports:
+      - "8080:8080"
+      - "4317:4317"
+      - "4318:4318"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
+    depends_on:
+      - clickstack
 ```
+
+```yaml
+# otel-collector-config.yaml
+receivers:
+  filelog:
+    include: [/var/log/app/*.log]
+    parsers:
+      json:
+
+exporters:
+  otlp:
+    endpoint: clickstack:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog]
+      exporters: [otlp]
+```
+
+Navigate to `http://localhost:8080` to search logs with Lucene-style queries (`level:err`) or SQL. Correlation IDs link log lines to traces automatically.
+
+To switch to Datadog, replace the OTLP exporter with:
+
+```yaml
+exporters:
+  datadog:
+    api:
+      key: ${DD_API_KEY}
+```
+
+Same Logback config, same structured logging. Only the collector exporter changes.
 
 ## Key Points
 
 - Use JSON logging in production — searchable, filterable, aggregatable
 - Correlation IDs (in MDC) link all log lines for a single request
 - Log business events at INFO, technical details at DEBUG
-- Keep production log levels at INFO/WARN — DEBUG floods the system
-- ELK stack: Logback → Logstash → Elasticsearch → Kibana for search and visualization
+- OTel Collector is the pipe — your app doesn't know or care where logs end up
+- Choose backend by team size and budget: ELK for maturity, Loki for cheap, ClickStack for unified, SaaS for zero ops
