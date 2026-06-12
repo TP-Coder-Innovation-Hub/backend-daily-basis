@@ -2,7 +2,9 @@
 
 For backend devs, by backend devs. Assumes Java + Spring Boot knowledge.
 
-A text-based course covering every real-world backend task. Each topic is short, direct, and packed with working Spring Boot code examples.
+This course draws from real production experience as a Java/Spring developer. Spring Boot is the primary vehicle because it's what I know best — the patterns and concepts (messaging, observability, resilience, concurrency) are universal and apply to any backend stack. When other languages are the right tool (TypeScript for serverless, Kotlin for reactive, Scala for actors), we use them directly.
+
+Each topic is short, direct, and packed with working code examples.
 
 ## Objectives
 

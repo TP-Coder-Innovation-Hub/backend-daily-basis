@@ -18,3 +18,9 @@
 - No preamble or filler
 - Real Spring Boot Java code with step-by-step explanation
 - No emojis, no level badges
+
+## Context
+- Spring Boot is the primary example vehicle — author's production experience
+- Patterns are universal (messaging, observability, resilience, concurrency)
+- Other languages used when they are the right tool: TypeScript (serverless), Kotlin (reactive), Scala (actors)
+- Don't add more Spring-specific content for things that aren't Spring patterns — keep the focus on the concept, use Spring as the vehicle
