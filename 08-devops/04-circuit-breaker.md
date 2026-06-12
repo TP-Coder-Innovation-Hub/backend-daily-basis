@@ -1,5 +1,7 @@
 # Circuit Breaker — Resilience4j
 
+> **Last verified:** June 2026 — resilience4j 2.2.0
+
 ## The Pattern
 
 A circuit breaker prevents cascading failures. When a downstream service fails repeatedly, the circuit opens — requests fail fast instead of waiting for timeouts.

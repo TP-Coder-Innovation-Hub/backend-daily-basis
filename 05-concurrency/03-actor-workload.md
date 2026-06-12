@@ -1,5 +1,7 @@
 # Actor Workload — Actor Model with Scala + Akka Typed
 
+> **Last verified:** June 2026 — Akka 2.8.5, Scala 2.13.12
+
 ## The Actor Model
 
 An actor is a unit of computation with its own state, behavior, and mailbox. Actors communicate exclusively through messages. No shared state. No locks.

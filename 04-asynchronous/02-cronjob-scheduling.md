@@ -1,5 +1,7 @@
 # Cronjob Scheduling — Scheduled Tasks in Spring Boot
 
+> **Last verified:** June 2026 — ShedLock 5.10.0
+
 ## When Scheduled Tasks
 
 Use scheduled tasks for periodic work: daily cleanup, report generation, cache warming, data sync. If it runs on a clock, use `@Scheduled`.

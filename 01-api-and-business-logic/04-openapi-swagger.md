@@ -1,5 +1,7 @@
 # OpenAPI / Swagger — API Documentation
 
+> **Last verified:** June 2026 — springdoc 2.3.0
+
 ## Why Document Your API
 
 Your API is a contract. Without documentation, consumers guess. OpenAPI (formerly Swagger) generates interactive docs directly from your Spring Boot code.

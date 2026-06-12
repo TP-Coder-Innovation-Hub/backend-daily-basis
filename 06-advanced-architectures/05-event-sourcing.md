@@ -1,5 +1,7 @@
 # Event Sourcing — Store Events, Not Current State
 
+> **Last verified:** June 2026 — Axon 4.9.0
+
 ## The Concept
 
 Traditional: store the current state (balance = $100). Event sourcing: store every event that led to the current state (deposited $200, withdrew $50, withdrew $50). The current state is derived by replaying events.

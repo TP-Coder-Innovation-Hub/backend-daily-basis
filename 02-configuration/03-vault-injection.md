@@ -1,5 +1,7 @@
 # Vault Injection — Secrets Management with Spring Cloud Vault
 
+> **Last verified:** June 2026 — Spring Cloud Vault 4.1.0
+
 ## Why Vault
 
 Secrets in environment variables or config files are visible in process lists, CI logs, and container inspections. HashiCorp Vault stores secrets centrally, controls access with policies, and rotates credentials automatically.

@@ -1,5 +1,7 @@
 # CQRS — Separate Read Model from Write Model
 
+> **Last verified:** June 2026 — Axon 4.9.0
+
 ## The Problem
 
 A single database model optimized for writes (normalized, transactional) is slow for reads (denormalized, aggregated). CQRS separates the two: different models, different databases, optimized independently.

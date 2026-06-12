@@ -1,5 +1,7 @@
 # gRPC — High-Performance Service Communication
 
+> **Last verified:** June 2026 — grpc-spring-boot-starter 3.1.0.RELEASE, grpc-protobuf 1.62.0
+
 ## Why gRPC
 
 REST is human-readable and flexible. gRPC is fast, strongly typed, and generates client/server code for you. Use gRPC when services talk to each other internally and performance matters.

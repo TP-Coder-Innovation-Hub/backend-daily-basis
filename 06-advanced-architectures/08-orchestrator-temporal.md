@@ -1,5 +1,7 @@
 # Orchestrator — Temporal for Durable Execution
 
+> **Last verified:** June 2026 — Temporal SDK 1.24.0
+
 ## Why Temporal
 
 Distributed workflows fail halfway. The payment succeeded but shipping failed. What state are you in? Who retries? Temporal provides durable execution — your workflow code is guaranteed to complete, even if servers crash.

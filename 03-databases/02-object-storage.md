@@ -1,5 +1,7 @@
 # Object Storage — Files Don't Belong in Your Database
 
+> **Last verified:** June 2026 — AWS SDK 2.25.0
+
 ## Why Object Storage
 
 Storing files in a database (as BLOBs) wastes resources, bloats backups, and kills query performance. Object storage (S3, MinIO) stores files separately and gives you URLs to reference them.

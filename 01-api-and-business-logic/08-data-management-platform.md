@@ -1,5 +1,7 @@
 # Data Management Platform — Apache Calcite for Query Federation
 
+> **Last verified:** June 2026 — Calcite 1.36.0
+
 ## The Problem
 
 Your data lives in multiple places: PostgreSQL for transactions, MongoDB for documents, CSV files from partners, Elasticsearch for search. Joining across these sources means ETL pipelines or data duplication.

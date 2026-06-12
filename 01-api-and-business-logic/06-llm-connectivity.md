@@ -1,14 +1,21 @@
 # LLM Connectivity — Connecting Spring Boot to AI APIs
 
-## The Goal
+> **Last verified:** June 2026
 
-Your Spring Boot service needs to call OpenAI, Anthropic, or any LLM API. This covers API calls, prompt templates, streaming responses, and error handling.
+## Two Approaches: Raw HTTP vs Spring AI
 
-## Step 1: Basic API Call with RestClient
+| | Raw RestClient/WebClient | Spring AI |
+|---|---|---|
+| Best when | You need one provider, full control over the request shape | You want provider portability, prompt templates, tool calling |
+| Tradeoff | More boilerplate, vendor-locked | Extra dependency, abstraction hides API quirks |
+
+Use raw HTTP to understand what the API actually does. Use Spring AI when you want to swap OpenAI for Claude or Gemini by changing one property.
+
+## Step 1: OpenAI with RestClient
 
 ```java
 @Configuration
-public class LlmConfig {
+public class OpenAiConfig {
     @Bean
     public RestClient openAiRestClient(
             @Value("${openai.api-key}") String apiKey) {
@@ -24,12 +31,12 @@ public class LlmConfig {
 ```java
 @Service
 @RequiredArgsConstructor
-public class LlmService {
+public class OpenAiService {
     private final RestClient openAiRestClient;
 
     public String complete(String prompt, String systemMessage) {
         var body = Map.of(
-            "model", "gpt-4o",
+            "model", "gpt-4.1-mini",
             "messages", List.of(
                 Map.of("role", "system", "content", systemMessage),
                 Map.of("role", "user", "content", prompt)
@@ -46,73 +53,151 @@ public class LlmService {
     }
 }
 
-public record OpenAiResponse(
-    List<Choice> choices,
-    Usage usage
-) {}
-
+public record OpenAiResponse(List<Choice> choices, Usage usage) {}
 public record Choice(Message message) {}
 public record Message(String role, String content) {}
 public record Usage(int prompt_tokens, int completion_tokens, int total_tokens) {}
 ```
 
-## Step 2: Streaming Responses (SSE)
+## Step 2: Anthropic (Claude) with RestClient
 
-Streaming delivers tokens as they arrive instead of waiting for the full response.
+Anthropic uses a different endpoint shape and the `x-api-key` header:
 
 ```java
-@Service
-@RequiredArgsConstructor
-public class StreamingLlmService {
-    private final WebClient webClient;
-
-    public Flux<String> streamComplete(String prompt) {
-        var body = Map.of(
-            "model", "gpt-4o",
-            "messages", List.of(
-                Map.of("role", "user", "content", prompt)
-            ),
-            "stream", true
-        );
-        return webClient.post()
-            .uri("/chat/completions")
-            .bodyValue(body)
-            .retrieve()
-            .bodyToFlux(String.class)
-            .filter(line -> !line.equals("[DONE]"))
-            .map(this::extractContent)
-            .filter(content -> !content.isEmpty());
-    }
-
-    private String extractContent(String json) {
-        try {
-            var node = new ObjectMapper().readTree(json);
-            return node.at("/choices/0/delta/content").asText("");
-        } catch (Exception e) {
-            return "";
-        }
+@Configuration
+public class AnthropicConfig {
+    @Bean
+    public RestClient anthropicRestClient(
+            @Value("${anthropic.api-key}") String apiKey) {
+        return RestClient.builder()
+            .baseUrl("https://api.anthropic.com/v1")
+            .defaultHeader("x-api-key", apiKey)
+            .defaultHeader("anthropic-version", "2023-06-01")
+            .defaultHeader("Content-Type", "application/json")
+            .build();
     }
 }
 ```
 
-## Step 3: Streaming Controller (SSE Endpoint)
+```java
+@Service
+@RequiredArgsConstructor
+public class AnthropicService {
+    private final RestClient anthropicRestClient;
+
+    public String complete(String prompt, String systemMessage) {
+        var body = Map.of(
+            "model", "claude-sonnet-4-20250514",
+            "max_tokens", 500,
+            "system", systemMessage,
+            "messages", List.of(
+                Map.of("role", "user", "content", prompt)
+            )
+        );
+        var response = anthropicRestClient.post()
+            .uri("/messages")
+            .body(body)
+            .retrieve()
+            .body(AnthropicResponse.class);
+        return response.content().getFirst().text();
+    }
+}
+
+public record AnthropicResponse(List<ContentBlock> content, AnthropicUsage usage) {}
+public record ContentBlock(String type, String text) {}
+public record AnthropicUsage(int input_tokens, int output_tokens) {}
+```
+
+Key differences from OpenAI:
+- Endpoint is `/messages` not `/chat/completions`
+- `system` is a top-level field, not a message in the array
+- Response wraps content in `ContentBlock` objects with `type` and `text`
+- Auth header is `x-api-key` + `anthropic-version`
+
+## Step 3: Spring AI — One API, Multiple Providers
+
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+</dependency>
+```
+
+For Claude, swap the dependency:
+
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-anthropic-spring-boot-starter</artifactId>
+</dependency>
+```
+
+```yaml
+# application.yml — OpenAI
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4.1-mini
+          temperature: 0.3
+```
+
+```yaml
+# application.yml — Claude (just change the prefix)
+spring:
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY}
+      chat:
+        options:
+          model: claude-sonnet-4-20250514
+          temperature: 0.3
+```
+
+The service code stays the same regardless of provider:
+
+```java
+@Service
+@RequiredArgsConstructor
+public class ChatService {
+    private final ChatClient chatClient;
+
+    public String complete(String prompt, String systemMessage) {
+        return chatClient.prompt()
+            .system(systemMessage)
+            .user(prompt)
+            .call()
+            .content();
+    }
+
+    public Flux<String> stream(String prompt) {
+        return chatClient.prompt()
+            .user(prompt)
+            .stream()
+            .content();
+    }
+}
+```
+
+## Step 4: Streaming Controller (SSE Endpoint)
 
 ```java
 @RestController
 @RequestMapping("/api/llm")
 @RequiredArgsConstructor
 public class LlmController {
-    private final StreamingLlmService streamingService;
-    private final LlmService llmService;
+    private final ChatService chatService;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> stream(@RequestParam String prompt) {
-        return streamingService.streamComplete(prompt);
+        return chatService.stream(prompt);
     }
 
     @PostMapping("/complete")
     public ResponseEntity<LlmResult> complete(@RequestBody PromptRequest request) {
-        var result = llmService.complete(request.prompt(), request.system());
+        var result = chatService.complete(request.prompt(), request.system());
         return ResponseEntity.ok(new LlmResult(result));
     }
 }
@@ -121,7 +206,9 @@ public record PromptRequest(String prompt, String system) {}
 public record LlmResult(String content) {}
 ```
 
-## Step 4: Prompt Templates
+## Step 5: Prompt Templates
+
+With Spring AI, templates use `{placeholders}` instead of `%s`:
 
 ```java
 @Component
@@ -130,37 +217,38 @@ public class PromptTemplates {
         You are a helpful assistant. Summarize the following text concisely.
 
         Text:
-        %s
+        {text}
 
         Summary:
         """;
 
     private static final String CLASSIFY_TEMPLATE = """
         Classify the following text into one of these categories:
-        %s
+        {categories}
 
-        Text: %s
+        Text: {text}
 
         Respond with only the category name.
         """;
 
-    public String formatSummarize(String text) {
-        return String.format(SUMMARIZE_TEMPLATE, text);
-    }
-
-    public String formatClassify(String categories, String text) {
-        return String.format(CLASSIFY_TEMPLATE, categories, text);
+    public Prompt summarizePrompt(String text) {
+        return PromptTemplate.builder()
+            .template(SUMMARIZE_TEMPLATE)
+            .variables(Map.of("text", text))
+            .build();
     }
 }
 ```
 
-## Step 5: Error Handling for Rate Limits
+Without Spring AI, use `String.format()` with `%s` — functionally identical but provider-specific code handles the call.
+
+## Step 6: Error Handling for Rate Limits
 
 ```java
 @Service
 @RequiredArgsConstructor
-public class ResilientLlmService {
-    private final RestClient openAiRestClient;
+public class ResilientChatService {
+    private final ChatClient chatClient;
 
     @Retryable(
         retryFor = {HttpServerErrorException.class, ResourceAccessException.class},
@@ -169,7 +257,10 @@ public class ResilientLlmService {
     )
     public String completeWithRetry(String prompt) {
         try {
-            return callLlm(prompt);
+            return chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
         } catch (HttpClientErrorException.TooManyRequests e) {
             String retryAfter = e.getResponseHeaders()
                 .getFirst("Retry-After");
@@ -179,33 +270,15 @@ public class ResilientLlmService {
                 "Rate limited. Retry after " + waitSeconds + "s");
         }
     }
-
-    private String callLlm(String prompt) {
-        var body = Map.of(
-            "model", "gpt-4o",
-            "messages", List.of(
-                Map.of("role", "user", "content", prompt)
-            ),
-            "max_tokens", 200
-        );
-        var response = openAiRestClient.post()
-            .uri("/chat/completions")
-            .body(body)
-            .retrieve()
-            .body(OpenAiResponse.class);
-        return response.choices().getFirst().message().content();
-    }
 }
 ```
 
 ## Token Counting
 
-Track tokens to stay within model limits and control costs:
-
 ```java
 public int estimateTokens(String text) {
-    return (int) (text.length() / 4.0); // rough estimate: ~4 chars per token
+    return (int) (text.length() / 4.0);
 }
 ```
 
-For accurate counting, use OpenAI's tokenizer library (`tiktoken` via JNI or a Java port).
+For accurate counting, Spring AI exposes token usage in the response metadata. For raw API calls, check the `usage` field in the response body — both OpenAI and Anthropic return actual token counts.
