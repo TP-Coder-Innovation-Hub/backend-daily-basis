@@ -13,6 +13,8 @@ Spring Boot on Lambda has 2-5 second cold starts. TypeScript and Python are the 
 
 ## Architecture
 
+> **Diagram:** Serverless architecture with API Gateway triggering a TypeScript Lambda, SQS Queue and EventBridge triggering a Python Lambda, both writing to DynamoDB.
+
 ```mermaid
 graph LR
     A[API Gateway] -->|HTTP| B["Lambda: TypeScript"]
