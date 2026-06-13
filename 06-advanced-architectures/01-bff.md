@@ -4,6 +4,8 @@
 
 A mobile app needs less data than a web dashboard. An internal admin panel needs different fields than a customer app. One monolithic API cannot serve all frontends well. A BFF is a dedicated backend for each frontend type.
 
+> **Diagram:** Three frontends (Mobile App, Web Dashboard, Admin Panel) each connect through their own BFF, which in turn call shared Product, Order, and Audit services.
+
 ```mermaid
 graph TD
     A[Mobile App] --> B[Mobile BFF]
