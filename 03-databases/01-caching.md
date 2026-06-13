@@ -6,6 +6,8 @@ Every database query costs time and resources. If the same data is read frequent
 
 ## Cache Aside Pattern
 
+> **Diagram:** Cache-aside pattern where a request checks the cache first, returns immediately on a hit, or queries the database and stores the result in cache on a miss.
+
 ```mermaid
 graph LR
     A[Request] --> B{Cache hit?}
