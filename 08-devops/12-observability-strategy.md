@@ -147,6 +147,8 @@ Every alert needs a runbook — a document that explains:
 
 ## The Observability Stack Landscape
 
+> **Diagram:** Spring Boot application sends telemetry via Micrometer, Logback, and Tracing to an OTel Collector, which can export to ELK, LGTM Stack, ClickStack, or SaaS backends like Datadog/New Relic.
+
 ```mermaid
 graph TD
     A[Spring Boot Application] -->|Micrometer / Logback / Tracing| B[OTel Collector]
