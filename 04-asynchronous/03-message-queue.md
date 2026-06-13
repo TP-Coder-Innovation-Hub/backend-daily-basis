@@ -4,6 +4,8 @@
 
 A message queue delivers each message to exactly one consumer. The producer sends to a queue, one worker picks it up, processes it, and acknowledges.
 
+> **Diagram:** RabbitMQ point-to-point messaging where a Producer publishes to an Exchange that routes to a Queue, with multiple Workers consuming messages and a Dead Letter Queue for retries.
+
 ```mermaid
 graph LR
     A[Producer] -->|publish| B[Exchange]
