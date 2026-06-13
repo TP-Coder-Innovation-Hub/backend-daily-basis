@@ -4,6 +4,8 @@
 
 No central coordinator. Each service publishes events when it does something. Other services listen and react. The workflow emerges from independent services reacting to events.
 
+> **Diagram:** Event-driven choreography where Order Service publishes OrderPlaced to Payment and Notification services, Payment publishes results to Shipping, and Shipping notifies Order and Notification services.
+
 ```mermaid
 graph TD
     A[Order Service] -->|OrderPlaced| B[Payment Service]
