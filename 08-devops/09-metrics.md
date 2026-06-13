@@ -159,6 +159,8 @@ Your application code (`@Timed`, `MeterRegistry`) does not change. Only the expo
 
 ## The Metrics Backend Landscape
 
+> **Diagram:** Spring Boot with Micrometer exporting metrics via Prometheus scrape or OTLP to backends including Prometheus+Grafana, ClickStack, LGTM Stack, or Datadog/New Relic.
+
 ```mermaid
 graph LR
     A[Spring Boot + Micrometer] --> B{Export via}
