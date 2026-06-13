@@ -12,6 +12,8 @@ Kafka Streams is a library for building real-time stream processing applications
 
 ## Kafka Mental Model
 
+> **Diagram:** Kafka topic with partitions distributed across Consumer Group A (billing) workers and fully consumed by Consumer Group B (analytics).
+
 ```mermaid
 graph LR
     A["Producer"] -->|writes| B["Topic: orders"]
