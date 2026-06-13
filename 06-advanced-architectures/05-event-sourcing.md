@@ -6,6 +6,8 @@
 
 Traditional: store the current state (balance = $100). Event sourcing: store every event that led to the current state (deposited $200, withdrew $50, withdrew $50). The current state is derived by replaying events.
 
+> **Diagram:** Sequential events (AccountOpened, Deposited $200, Withdrew $50, Withdrew $50) replayed to derive the current account state of $100.
+
 ```mermaid
 graph LR
     A[Event 1: AccountOpened] --> B[Event 2: Deposited $200]
