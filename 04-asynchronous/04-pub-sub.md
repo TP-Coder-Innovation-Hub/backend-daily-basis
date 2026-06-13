@@ -4,6 +4,8 @@
 
 In pub/sub, a producer publishes events to a topic. Multiple consumer groups each receive a copy of every event. Each group processes independently at its own pace.
 
+> **Diagram:** Order Service publishes to a Kafka topic, which fans out to four independent consumer groups: Billing, Shipping, Analytics, and Notifications.
+
 ```mermaid
 graph LR
     A[Order Service] -->|publish| B[Topic: order-events]
