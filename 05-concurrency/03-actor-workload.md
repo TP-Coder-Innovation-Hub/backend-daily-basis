@@ -6,6 +6,8 @@
 
 An actor is a unit of computation with its own state, behavior, and mailbox. Actors communicate exclusively through messages. No shared state. No locks.
 
+> **Diagram:** Actor model showing Actors A, B, and C exchanging messages, with a Mailbox dequeuing messages to Actor B.
+
 ```mermaid
 graph TD
     A["Actor A"] -->|message| B["Actor B"]
