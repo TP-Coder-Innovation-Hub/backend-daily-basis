@@ -6,6 +6,8 @@ A request hits your API gateway, calls the order service, which calls the paymen
 
 ## How Tracing Works
 
+> **Diagram:** Distributed tracing showing a single trace ID propagated from Gateway through Order Service to Payment and Shipping services, each creating their own span.
+
 ```mermaid
 graph LR
     A[Gateway: Trace abc123, Span 1] --> B[Order Service: Span 2]
