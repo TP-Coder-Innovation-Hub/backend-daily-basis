@@ -11,6 +11,8 @@
 
 ## Spring Batch Concepts
 
+> **Diagram:** Spring Batch pipeline showing a Job with Steps, where each Step processes data in Chunks through an ItemReader, ItemProcessor, and ItemWriter.
+
 ```mermaid
 graph LR
     A[Job] --> B[Step 1]
