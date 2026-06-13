@@ -6,6 +6,8 @@ Hardcoded frontend configurations create deployment dependencies. When menus, ic
 
 ## The Architecture
 
+> **Diagram:** Frontend fetches UI configuration from the Backend, which reads from a database and applies role-based filtering before returning dynamic menus and icons.
+
 ```mermaid
 graph LR
     A[Frontend] -->|GET /api/ui/config| B[Backend]
