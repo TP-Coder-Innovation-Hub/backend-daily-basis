@@ -12,6 +12,8 @@ Apache Calcite lets you write SQL queries that span multiple data sources.
 
 Calcite is a SQL parser and query engine. It does not store data. It translates SQL into optimized query plans that execute against your actual data sources.
 
+> **Diagram:** SQL query parsed by Calcite, optimized, then routed through PostgreSQL, MongoDB, or CSV adapters to return federated results.
+
 ```mermaid
 graph TD
     A[SQL Query] --> B[Calcite Parser]
