@@ -6,6 +6,8 @@
 
 A circuit breaker prevents cascading failures. When a downstream service fails repeatedly, the circuit opens — requests fail fast instead of waiting for timeouts.
 
+> **Diagram:** Circuit breaker state machine transitioning between Closed (normal), Open (failing fast), and Half-Open (testing recovery) states based on failure rates and successful calls.
+
 ```mermaid
 stateDiagram-v2
     Closed --> Open: Failure rate exceeds threshold
