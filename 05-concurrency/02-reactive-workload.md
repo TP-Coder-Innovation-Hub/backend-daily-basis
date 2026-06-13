@@ -4,6 +4,8 @@
 
 Traditional Spring MVC uses one thread per request. 200 concurrent requests = 200 threads. Reactive uses an event loop: a small number of threads handle thousands of concurrent connections via non-blocking I/O.
 
+> **Diagram:** Comparison of MVC (one blocking thread per request) versus WebFlux (single event loop thread handling multiple async requests concurrently).
+
 ```mermaid
 graph LR
     subgraph MVC
