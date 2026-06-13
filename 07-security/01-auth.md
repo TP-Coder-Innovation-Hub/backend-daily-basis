@@ -4,6 +4,8 @@
 
 Every request passes through a chain of filters before reaching your controller. Spring Security configures this chain to handle authentication and authorization.
 
+> **Diagram:** HTTP request flowing through Spring Security's filter chain — Authentication Filter then Authorization Filter — before reaching the controller.
+
 ```mermaid
 graph LR
     A[HTTP Request] --> B[Security Filter Chain]
