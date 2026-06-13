@@ -4,6 +4,8 @@
 
 HTTP is request-response. IoT devices push telemetry continuously — temperature, humidity, GPS, battery. Polling wastes bandwidth and adds latency. WebSocket keeps a single persistent connection open: devices push readings, server broadcasts to dashboards, dashboards send commands back to devices — all in real-time.
 
+> **Diagram:** Bidirectional STOMP communication between IoT Device, Spring Boot Server, and Vue 3 Dashboard — devices send telemetry, server broadcasts to dashboard, and dashboard sends commands back.
+
 ```mermaid
 graph LR
     A["IoT Device (ESP32/RPi)"] -->|STOMP SEND| B["Spring Boot Server"]
