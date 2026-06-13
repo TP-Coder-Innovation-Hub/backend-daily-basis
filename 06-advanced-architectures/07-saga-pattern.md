@@ -6,6 +6,8 @@ An order spans three services: Order, Payment, and Shipping. In a monolith, one 
 
 A saga is a sequence of local transactions. Each service does its part and publishes an event. If any step fails, compensating transactions undo previous steps.
 
+> **Diagram:** Saga flow where Create Order leads to Process Payment, then either Ship Order on success or Cancel Order on failure, with Shipping failure triggering a Refund Payment compensation.
+
 ```mermaid
 graph TD
     A[Create Order] --> B[Process Payment]
