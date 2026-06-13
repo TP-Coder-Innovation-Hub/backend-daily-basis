@@ -6,6 +6,8 @@ A flash sale launches. 100,000 users hit "buy" in 10 seconds. Your database hand
 
 A virtual waiting queue controls the flow: users get a position, wait their turn, and enter the system when capacity is available.
 
+> **Diagram:** User requests enter a Queue Service backed by Redis Sorted Sets; if position is within capacity, access is granted, otherwise a wait time is returned and the client polls again.
+
 ```mermaid
 graph LR
     A[User Request] --> B[Queue Service]
