@@ -6,6 +6,8 @@
 
 A single database model optimized for writes (normalized, transactional) is slow for reads (denormalized, aggregated). CQRS separates the two: different models, different databases, optimized independently.
 
+> **Diagram:** CQRS flow where a Command goes to the Write Model, which publishes an event to an Event Handler that updates the Read Model, with Queries reading from the Read Model.
+
 ```mermaid
 graph LR
     A[Command] --> B[Write Model]
