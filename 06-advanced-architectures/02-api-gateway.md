@@ -6,6 +6,8 @@ Without a gateway, clients call each service directly. This means: CORS configur
 
 A gateway is the single entry point. It handles cross-cutting concerns once.
 
+> **Diagram:** Client requests routed through an API Gateway to Product, Order, and User services, with Auth Filter, Rate Limiter, and Logging applied at the gateway.
+
 ```mermaid
 graph LR
     A[Client] --> B[API Gateway]
