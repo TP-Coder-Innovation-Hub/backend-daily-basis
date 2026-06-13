@@ -6,6 +6,8 @@ Rate limiting protects your service from being overwhelmed. It ensures fair usag
 
 ## Token Bucket Algorithm
 
+> **Diagram:** Token bucket algorithm where a request checks token availability — if tokens exist the request is processed, otherwise a 429 is returned — while a refill timer periodically adds tokens back to the bucket.
+
 ```mermaid
 graph LR
     A[Request] --> B{Tokens available?}
