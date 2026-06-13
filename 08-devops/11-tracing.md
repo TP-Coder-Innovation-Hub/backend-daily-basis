@@ -165,6 +165,8 @@ Search logs by `traceId` to see every log line for a specific request across all
 
 ## The Tracing Backend Landscape
 
+> **Diagram:** Spring Boot with Micrometer Tracing exports traces via Brave or OTel to backend options including Zipkin, Jaeger, ClickStack, Grafana Tempo, or Datadog/New Relic APM.
+
 ```mermaid
 graph LR
     A[Spring Boot + Micrometer Tracing] -->|Brave/OTel| B{Export via}
