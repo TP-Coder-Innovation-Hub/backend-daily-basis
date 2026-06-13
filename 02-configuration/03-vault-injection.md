@@ -8,6 +8,8 @@ Secrets in environment variables or config files are visible in process lists, C
 
 ## How It Works
 
+> **Diagram:** Spring Boot application authenticates with a Vault Server, receives secrets, and injects them into @Value or ConfigProperties fields.
+
 ```mermaid
 graph LR
     A[Spring Boot App] -->|Authenticates| B[Vault Server]
