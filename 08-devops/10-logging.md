@@ -141,6 +141,8 @@ logging:
 
 Your app emits structured JSON logs. The question is: where do they go? OpenTelemetry provides a vendor-neutral pipeline.
 
+> **Diagram:** Spring Boot with Logback emits JSON logs to stdout, which are collected by the OTel Collector and forwarded via OTLP to backends like ClickStack, ELK, Datadog, or New Relic.
+
 ```mermaid
 graph LR
     A[Spring Boot + Logback] -->|JSON stdout| B[OTel Collector]
