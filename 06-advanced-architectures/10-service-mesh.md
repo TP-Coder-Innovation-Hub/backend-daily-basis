@@ -4,6 +4,8 @@
 
 Microservices need mTLS, retries, circuit breaking, observability, and traffic management. Implementing these in every service means duplicated code and inconsistent behavior. A service mesh moves these concerns to an infrastructure layer.
 
+> **Diagram:** Service A communicates with Service B through sidecar proxies that handle mTLS, retries, and metrics transparently.
+
 ```mermaid
 graph LR
     A[Service A] --> B[Sidecar Proxy]
